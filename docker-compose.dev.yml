@@ -1,0 +1,22 @@
+version: "3.9"
+# Local development: bind-mount source, hot reload, no GHCR images
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend.Dockerfile
+    environment:
+      - DATABASE_URL=sqlite:///./data/geotracker.db
+      - GUARDIAN_API_KEY=${GUARDIAN_API_KEY:-test}
+      - ADMIN_KEY=${ADMIN_KEY:-devkey}
+      - SCRAPE_INTERVAL_MINUTES=0       # 0 = disable auto-scraping in dev
+      - CORS_ORIGINS=http://localhost:3000
+    volumes:
+      - ./backend:/app                  # Hot-reload via uvicorn --reload
+      - ./data:/app/data
+    ports:
+      - "8000:8000"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend runs natively (npm run dev) - not in Docker for best DX

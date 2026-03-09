@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/sites:/etc/nginx/conf.d:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/geotracker-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend.Dockerfile
+      args:
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${MAPBOX_TOKEN}
+        NEXT_PUBLIC_API_URL: http://backend:8000
+    environment:
+      - NODE_ENV=production
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/geotracker-backend:latest
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend.Dockerfile
+    environment:
+      - DATABASE_URL=sqlite:////data/geotracker.db
+      - GUARDIAN_API_KEY=${GUARDIAN_API_KEY:-test}
+      - NEWSAPI_KEY=${NEWSAPI_KEY:-}
+      - ADMIN_KEY=${ADMIN_KEY:-changeme}
+      - SCRAPE_INTERVAL_MINUTES=${SCRAPE_INTERVAL_MINUTES:-30}
+      - CORS_ORIGINS=http://localhost,http://frontend:3000
+    volumes:
+      - geotracker_data:/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+volumes:
+  geotracker_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/geotracker/data
