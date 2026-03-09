@@ -8,6 +8,9 @@ on:
 env:
   REGISTRY: ghcr.io
   REPO: ${{ github.repository }}
+  # Docker image names must be lowercase
+  BACKEND_IMAGE: ghcr.io/marcusbelga/geotracker-backend
+  FRONTEND_IMAGE: ghcr.io/marcusbelga/geotracker-frontend
 
 jobs:
   # ─── Lint frontend ──────────────────────────────────────────────────────────
@@ -69,7 +72,7 @@ jobs:
           file: ./docker/backend.Dockerfile
           platforms: linux/arm64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.REPO }}-backend:latest
+          tags: ${{ env.BACKEND_IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -80,7 +83,7 @@ jobs:
           file: ./docker/frontend.Dockerfile
           platforms: linux/arm64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.REPO }}-frontend:latest
+          tags: ${{ env.FRONTEND_IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
