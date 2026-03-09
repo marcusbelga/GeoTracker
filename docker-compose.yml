@@ -39,7 +39,7 @@ services:
       - NEWSAPI_KEY=${NEWSAPI_KEY:-}
       - ADMIN_KEY=${ADMIN_KEY:-changeme}
       - SCRAPE_INTERVAL_MINUTES=${SCRAPE_INTERVAL_MINUTES:-30}
-      - CORS_ORIGINS=http://localhost,http://frontend:3000
+      - CORS_ORIGINS=http://localhost,http://frontend:3000,https://conflicts.corneel.me
     volumes:
       - geotracker_data:/data
     expose:
