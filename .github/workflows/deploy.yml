@@ -90,7 +90,7 @@ jobs:
             NEXT_PUBLIC_MAPBOX_TOKEN=${{ secrets.MAPBOX_TOKEN }}
             NEXT_PUBLIC_API_URL=https://conflicts.corneel.me
 
-  # ─── Deploy to Raspberry Pi via SSH ─────────────────────────────────────────
+  # ─── Deploy to Raspberry Pi via Cloudflare Tunnel SSH ───────────────────────
   deploy:
     name: Deploy to Raspberry Pi
     needs: build-push
@@ -98,30 +98,46 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy docker-compose.yml to Pi
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.PI_HOST }}
-          username: ${{ secrets.PI_USER }}
-          key: ${{ secrets.PI_SSH_KEY }}
-          port: ${{ secrets.PI_SSH_PORT }}
-          source: "docker-compose.yml,nginx/"
-          target: "/opt/geotracker/"
+      - name: Install cloudflared
+        run: |
+          curl -fsSL --output cloudflared.deb \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
+
+      - name: Set up SSH key & tunnel config
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PI_SSH_KEY }}
+          PI_USER: ${{ secrets.PI_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          cat > ~/.ssh/config << EOF
+          Host pi-tunnel
+            HostName ssh.conflicts.corneel.me
+            User $PI_USER
+            IdentityFile ~/.ssh/deploy_key
+            ProxyCommand cloudflared access ssh --hostname %h
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+
+      - name: Copy files to Pi
+        run: |
+          scp -r -F ~/.ssh/config docker-compose.yml nginx/ pi-tunnel:/opt/geotracker/
 
       - name: Deploy on Raspberry Pi
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PI_HOST }}
-          username: ${{ secrets.PI_USER }}
-          key: ${{ secrets.PI_SSH_KEY }}
-          port: ${{ secrets.PI_SSH_PORT }}
-          script: |
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          ssh -F ~/.ssh/config pi-tunnel "bash -s" << ENDSSH
             set -e
             cd /opt/geotracker
 
-            # Login to GHCR
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
-              -u ${{ github.actor }} --password-stdin
+            # Login to GHCR (token expanded locally before sending to remote)
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
             # Pull latest images
             docker compose pull
@@ -143,3 +159,4 @@ jobs:
             docker image prune -f
 
             echo "Deployment complete!"
+          ENDSSH
