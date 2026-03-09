@@ -1,12 +1,11 @@
-from datetime import date
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
 from database.db import get_db
-from database.models import Event, EventType, EventSource, NewsSource, ScrapeRun
+from database.models import Event, EventType, EventSource, ScrapeRun
 from schemas.event import (
-    EventResponse, EventDetailResponse, EventsListResponse,
+    EventDetailResponse, EventsListResponse,
     EventTypeResponse, ScrapeStatusResponse, SourceResponse
 )
 
@@ -30,7 +29,7 @@ def list_events(
 
     if date:
         try:
-            parsed = date_obj = __import__("datetime").date.fromisoformat(date)
+            parsed = __import__("datetime").date.fromisoformat(date)
             q = q.filter(Event.event_date == parsed)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")

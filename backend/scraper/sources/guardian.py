@@ -69,7 +69,7 @@ class GuardianScraper(BaseScraper):
                             published_at=published_at,
                         ))
 
-                except Exception as e:
+                except Exception:
                     pass  # Log handled by orchestrator
 
         return articles

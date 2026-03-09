@@ -1,6 +1,4 @@
 """BBC News Middle East section scraper using Playwright."""
-from datetime import datetime
-from typing import Optional
 
 from scraper.base_scraper import BaseScraper, RawArticle
 

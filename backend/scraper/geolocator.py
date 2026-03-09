@@ -4,7 +4,6 @@ Priority: 1. Article already has coords (GDELT), 2. Known cities dict, 3. Nomina
 """
 
 import asyncio
-import re
 import httpx
 from typing import Optional
 
