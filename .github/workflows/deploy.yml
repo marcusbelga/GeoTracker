@@ -118,7 +118,7 @@ jobs:
             HostName ssh.conflicts.corneel.me
             User $PI_USER
             IdentityFile ~/.ssh/deploy_key
-            ProxyCommand cloudflared access ssh --hostname %h
+            ProxyCommand cloudflared access tcp --hostname %h
             StrictHostKeyChecking no
             UserKnownHostsFile /dev/null
           EOF
