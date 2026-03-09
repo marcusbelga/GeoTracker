@@ -90,73 +90,15 @@ jobs:
             NEXT_PUBLIC_MAPBOX_TOKEN=${{ secrets.MAPBOX_TOKEN }}
             NEXT_PUBLIC_API_URL=https://conflicts.corneel.me
 
-  # ─── Deploy to Raspberry Pi via Cloudflare Tunnel SSH ───────────────────────
-  deploy:
-    name: Deploy to Raspberry Pi
+  # ─── Notify deploy (Watchtower auto-pulls on Pi) ────────────────────────────
+  notify:
+    name: Notify deploy complete
     needs: build-push
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install cloudflared
+      - name: Images pushed to GHCR
         run: |
-          curl -fsSL --output cloudflared.deb \
-            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared.deb
-
-      - name: Set up SSH key & tunnel config
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.PI_SSH_KEY }}
-          PI_USER: ${{ secrets.PI_USER }}
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          cat > ~/.ssh/config << EOF
-          Host pi-tunnel
-            HostName ssh.conflicts.corneel.me
-            User $PI_USER
-            IdentityFile ~/.ssh/deploy_key
-            ProxyCommand cloudflared access tcp --hostname %h
-            StrictHostKeyChecking no
-            UserKnownHostsFile /dev/null
-          EOF
-
-      - name: Copy files to Pi
-        run: |
-          scp -r -F ~/.ssh/config docker-compose.yml nginx/ pi-tunnel:/opt/geotracker/
-
-      - name: Deploy on Raspberry Pi
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_USER: ${{ github.actor }}
-        run: |
-          ssh -F ~/.ssh/config pi-tunnel "bash -s" << ENDSSH
-            set -e
-            cd /opt/geotracker
-
-            # Login to GHCR (token expanded locally before sending to remote)
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-
-            # Pull latest images
-            docker compose pull
-
-            # Rolling restart: backend first, then frontend, then nginx
-            docker compose up -d --no-deps --no-build backend
-            sleep 10
-
-            docker compose up -d --no-deps --no-build frontend
-            sleep 5
-
-            docker compose up -d --no-deps --no-build nginx
-
-            # Health check
-            sleep 5
-            curl -f http://localhost/api/v1/health || exit 1
-
-            # Prune old images to save disk space
-            docker image prune -f
-
-            echo "Deployment complete!"
-          ENDSSH
+          echo "✅ Images pushed to GHCR."
+          echo "Watchtower on the Pi will detect and deploy within 5 minutes."
+          echo "Backend:  ${{ env.BACKEND_IMAGE }}:latest"
+          echo "Frontend: ${{ env.FRONTEND_IMAGE }}:latest"
