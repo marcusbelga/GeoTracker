@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom/server";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -17,15 +17,37 @@ interface MapContainerProps {
   onEventSelect: (event: GeoEvent | null) => void;
 }
 
+/** Group events into spatial clusters (≈1 km grid by rounding to 2 decimal places). */
+function buildClusters(events: GeoEvent[]): Map<string, GeoEvent[]> {
+  const clusters = new Map<string, GeoEvent[]>();
+  for (const event of events) {
+    const key = `${event.lat.toFixed(2)},${event.lng.toFixed(2)}`;
+    if (!clusters.has(key)) clusters.set(key, []);
+    clusters.get(key)!.push(event);
+  }
+  return clusters;
+}
+
+/** Evenly space N items around a circle, starting from the top (−90°). */
+function radialPositions(count: number, radius: number): { x: number; y: number }[] {
+  return Array.from({ length: count }, (_, i) => {
+    const angle = ((360 / count) * i - 90) * (Math.PI / 180);
+    return {
+      x: Math.round(Math.cos(angle) * radius),
+      y: Math.round(Math.sin(angle) * radius),
+    };
+  });
+}
+
 export default function MapContainer({ events, selectedEventId, onEventSelect }: MapContainerProps) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
-  const markersRef = useRef<Map<number, { marker: mapboxgl.Marker; el: HTMLDivElement }>>(new Map());
-  const popupRef = useRef<mapboxgl.Popup | null>(null);
-  const [popupEvent, setPopupEvent] = useState<GeoEvent | null>(null);
-  const [popupLngLat, setPopupLngLat] = useState<[number, number] | null>(null);
+  const clusterMarkersRef = useRef<Map<string, { marker: mapboxgl.Marker; el: HTMLDivElement }>>(new Map());
+  const popupRootRef = useRef<{ root: ReturnType<typeof import("react-dom/client")["createRoot"]>; popup: mapboxgl.Popup } | null>(null);
+  // Track state for popup without re-running map init
+  const popupStateRef = useRef<{ event: GeoEvent | null; lngLat: [number, number] | null }>({ event: null, lngLat: null });
 
-  // Initialize map once
+  // ── Initialize map once ──────────────────────────────────────────────────
   useEffect(() => {
     if (!mapDivRef.current || mapRef.current) return;
 
@@ -43,113 +65,142 @@ export default function MapContainer({ events, selectedEventId, onEventSelect }:
     };
   }, []);
 
-  // Create HTML element for a pin
-  const createPinElement = useCallback((event: GeoEvent, isSelected: boolean): HTMLDivElement => {
-    const el = document.createElement("div");
-    el.className = `map-marker${isSelected ? " is-selected" : ""}`;
+  // ── Build one cluster marker element ────────────────────────────────────
+  const createClusterElement = useCallback(
+    (clusterEvents: GeoEvent[]): HTMLDivElement => {
+      const container = document.createElement("div");
+      const count = clusterEvents.length;
+      container.className = count === 1 ? "cluster-marker single" : "cluster-marker";
 
-    const IconComponent = getPinIcon(event.event_type.slug);
-    const typeClass = `pin-${event.event_type.slug}`;
+      // Max 8 pins in radial display; if more, just expand the first 8
+      const displayEvents = clusterEvents.slice(0, 8);
+      const displayCount = displayEvents.length;
+      const positions = radialPositions(displayCount, displayCount === 1 ? 0 : 62);
+      const midIdx = Math.floor((displayCount - 1) / 2);
 
-    el.innerHTML = `<div class="${typeClass}">${ReactDOM.renderToStaticMarkup(
-      <IconComponent size={32} isSelected={isSelected} />
-    )}</div>`;
+      displayEvents.forEach((event, i) => {
+        const pinDiv = document.createElement("div");
+        pinDiv.className = "cluster-pin";
+        pinDiv.title = event.title;
 
-    return el;
-  }, []);
+        // Stack offsets (deck-of-cards appearance when collapsed)
+        const offset = i - midIdx;
+        const stackX = offset * 3;
+        const stackY = offset * -2;
+        const stackRot = offset * 7;
+        const { x: expandX, y: expandY } = positions[i];
 
-  // Sync markers when events change
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+        pinDiv.style.cssText = [
+          `--stack-x:${stackX}px`,
+          `--stack-y:${stackY}px`,
+          `--stack-rot:${stackRot}deg`,
+          `--expand-x:${expandX}px`,
+          `--expand-y:${expandY}px`,
+          `--z:${i + 1}`,
+        ].join(";");
 
-    const currentIds = new Set(events.map((e) => e.id));
-    const existingIds = new Set(markersRef.current.keys());
+        const isSelected = event.id === selectedEventId;
+        const IconComponent = getPinIcon(event.event_type.slug);
+        const typeClass = `pin-${event.event_type.slug}`;
 
-    // Remove stale markers
-    for (const id of existingIds) {
-      if (!currentIds.has(id)) {
-        markersRef.current.get(id)?.marker.remove();
-        markersRef.current.delete(id);
-      }
-    }
+        pinDiv.innerHTML = `<div class="${typeClass}">${ReactDOM.renderToStaticMarkup(
+          <IconComponent size={28} isSelected={isSelected} />
+        )}</div>`;
 
-    // Add or update markers
-    for (const event of events) {
-      const isSelected = event.id === selectedEventId;
+        pinDiv.addEventListener("click", (e) => {
+          e.stopPropagation();
+          onEventSelect(event);
+          showPopup(event);
+        });
 
-      if (markersRef.current.has(event.id)) {
-        // Update selected class
-        const { el } = markersRef.current.get(event.id)!;
-        el.className = `map-marker${isSelected ? " is-selected" : ""}`;
-        continue;
-      }
-
-      const el = createPinElement(event, isSelected);
-
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onEventSelect(event);
-        setPopupEvent(event);
-        setPopupLngLat([event.lng, event.lat]);
+        container.appendChild(pinDiv);
       });
 
-      const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+      // Count badge for multi-event clusters
+      if (count > 1) {
+        const badge = document.createElement("div");
+        badge.className = "cluster-badge";
+        badge.textContent = String(count);
+        container.appendChild(badge);
+      }
+
+      return container;
+    },
+    [selectedEventId, onEventSelect] // eslint-disable-line
+  );
+
+  // ── Show Mapbox popup for an event ──────────────────────────────────────
+  const showPopup = useCallback(
+    (event: GeoEvent) => {
+      const map = mapRef.current;
+      if (!map) return;
+
+      // Tear down previous popup
+      if (popupRootRef.current) {
+        popupRootRef.current.root.unmount();
+        popupRootRef.current.popup.remove();
+        popupRootRef.current = null;
+      }
+
+      const container = document.createElement("div");
+      const popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset: [0, -20],
+        maxWidth: "280px",
+      })
         .setLngLat([event.lng, event.lat])
+        .setDOMContent(container)
         .addTo(map);
 
-      markersRef.current.set(event.id, { marker, el });
-    }
-  }, [events, selectedEventId, createPinElement, onEventSelect]);
+      const { createRoot } = require("react-dom/client");
+      const root = createRoot(container);
+      root.render(
+        <MapPopup
+          event={event}
+          onClose={() => {
+            root.unmount();
+            popup.remove();
+            popupRootRef.current = null;
+            onEventSelect(null);
+          }}
+        />
+      );
 
-  // Show/hide popup
+      popupRootRef.current = { root, popup };
+      popupStateRef.current = { event, lngLat: [event.lng, event.lat] };
+    },
+    [onEventSelect]
+  );
+
+  // ── Sync cluster markers when events / selection changes ─────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Remove old popup
-    if (popupRef.current) {
-      popupRef.current.remove();
-      popupRef.current = null;
+    // Tear down all existing markers
+    for (const { marker } of clusterMarkersRef.current.values()) {
+      marker.remove();
     }
+    clusterMarkersRef.current.clear();
 
-    if (!popupEvent || !popupLngLat) return;
+    const clusters = buildClusters(events);
 
-    const container = document.createElement("div");
-    const popup = new mapboxgl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      offset: [0, -20],
-      maxWidth: "280px",
-    })
-      .setLngLat(popupLngLat)
-      .setDOMContent(container)
-      .addTo(map);
+    for (const [, clusterEvents] of clusters) {
+      const avgLat = clusterEvents.reduce((s, e) => s + e.lat, 0) / clusterEvents.length;
+      const avgLng = clusterEvents.reduce((s, e) => s + e.lng, 0) / clusterEvents.length;
+      const clusterKey = `${avgLat.toFixed(2)},${avgLng.toFixed(2)}`;
 
-    // Render React component into popup container
-    const { createRoot } = require("react-dom/client");
-    const root = createRoot(container);
-    root.render(
-      <MapPopup
-        event={popupEvent}
-        onClose={() => {
-          popup.remove();
-          setPopupEvent(null);
-          setPopupLngLat(null);
-          onEventSelect(null);
-        }}
-      />
-    );
+      const el = createClusterElement(clusterEvents);
+      const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+        .setLngLat([avgLng, avgLat])
+        .addTo(map);
 
-    popupRef.current = popup;
+      clusterMarkersRef.current.set(clusterKey, { marker, el });
+    }
+  }, [events, selectedEventId, createClusterElement]);
 
-    return () => {
-      root.unmount();
-      popup.remove();
-    };
-  }, [popupEvent, popupLngLat, onEventSelect]);
-
-  // Fly to selected event
+  // ── Fly to selected event ────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !selectedEventId) return;
@@ -168,9 +219,6 @@ export default function MapContainer({ events, selectedEventId, onEventSelect }:
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <div ref={mapDivRef} id="map-root" />
-
-      {/* Zoom controls overlay styling handled by CSS */}
-      {/* Map attribution is kept minimal via CSS */}
     </div>
   );
 }

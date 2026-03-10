@@ -29,6 +29,7 @@ export interface GeoEvent {
   source_count: number;
   is_verified: boolean;
   confidence: number;
+  source_url?: string;
 }
 
 export interface GeoEventDetail extends GeoEvent {

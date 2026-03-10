@@ -47,6 +47,10 @@ NEWS_SOURCES = [
      "credibility": 0.9, "scraper_type": "api"},
     {"slug": "aljazeera", "display_name": "Al Jazeera", "base_url": "https://www.aljazeera.com",
      "credibility": 0.85, "scraper_type": "playwright"},
+    {"slug": "middle-east-eye", "display_name": "Middle East Eye", "base_url": "https://www.middleeasteye.net",
+     "credibility": 0.8, "scraper_type": "playwright"},
+    {"slug": "times-of-israel", "display_name": "Times of Israel", "base_url": "https://www.timesofisrael.com",
+     "credibility": 0.8, "scraper_type": "playwright"},
     {"slug": "gdelt", "display_name": "GDELT Project", "base_url": "https://gdeltproject.org",
      "credibility": 0.8, "scraper_type": "api"},
 ]

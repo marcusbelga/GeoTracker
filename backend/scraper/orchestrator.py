@@ -21,6 +21,9 @@ from .sources.gdelt import GDELTScraper
 from .sources.reuters import ReutersScraper
 from .sources.bbc import BBCScraper
 from .sources.ap_news import APNewsScraper
+from .sources.aljazeera import AlJazeeraScraper
+from .sources.middle_east_eye import MiddleEastEyeScraper
+from .sources.times_of_israel import TimesOfIsraelScraper
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,9 @@ SCRAPERS = [
     ReutersScraper,
     BBCScraper,
     APNewsScraper,
+    AlJazeeraScraper,
+    MiddleEastEyeScraper,
+    TimesOfIsraelScraper,
 ]
 
 

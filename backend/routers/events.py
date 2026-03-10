@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from database.db import get_db
 from database.models import Event, EventType, EventSource, ScrapeRun
 from schemas.event import (
-    EventDetailResponse, EventsListResponse,
+    EventDetailResponse, EventResponse, EventsListResponse,
     EventTypeResponse, ScrapeStatusResponse, SourceResponse
 )
 
@@ -52,9 +52,16 @@ def list_events(
     q = q.order_by(Event.event_date.desc(), Event.confidence.desc())
     events = q.limit(limit).all()
 
+    event_responses = []
+    for event in events:
+        er = EventResponse.model_validate(event)
+        if event.sources:
+            er.source_url = event.sources[0].article_url
+        event_responses.append(er)
+
     return EventsListResponse(
-        events=events,
-        total=len(events),
+        events=event_responses,
+        total=len(event_responses),
         date=date,
     )
 

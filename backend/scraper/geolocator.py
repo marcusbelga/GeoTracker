@@ -51,19 +51,49 @@ KNOWN_LOCATIONS: dict[str, tuple[float, float, str]] = {
     "west bank": (31.9522, 35.2332, "Palestine"),
 }
 
-# Country-level fallback coordinates
+# Country → its capital city key in KNOWN_LOCATIONS
+COUNTRY_TO_CAPITAL: dict[str, str] = {
+    "iran": "tehran",
+    "israel": "jerusalem",
+    "palestine": "ramallah",
+    "lebanon": "beirut",
+    "syria": "damascus",
+    "iraq": "baghdad",
+    "jordan": "amman",
+    "saudi arabia": "riyadh",
+    "qatar": "doha",
+    "kuwait": "kuwait city",
+    "uae": "dubai",
+    "oman": "muscat",
+    "yemen": "sanaa",
+    "usa": "washington",
+    "united states": "washington",
+    "us": "washington",
+    "american": "washington",
+}
+
+# Washington D.C. added to known locations
+KNOWN_LOCATIONS["washington"] = (38.9072, -77.0369, "USA")
+KNOWN_LOCATIONS["washington dc"] = (38.9072, -77.0369, "USA")
+
+# Country-level fallback — now all point to capital coords
 COUNTRY_COORDS: dict[str, tuple[float, float]] = {
-    "iran": (32.4279, 53.6880),
-    "israel": (31.0461, 34.8516),
-    "usa": (37.0902, -95.7129),
-    "united states": (37.0902, -95.7129),
-    "us": (37.0902, -95.7129),
-    "palestine": (31.9522, 35.2332),
-    "lebanon": (33.8547, 35.8623),
-    "syria": (34.8021, 38.9968),
-    "iraq": (33.2232, 43.6793),
-    "jordan": (30.5852, 36.2384),
-    "saudi arabia": (23.8859, 45.0792),
+    "iran": (35.6892, 51.3890),
+    "israel": (31.7683, 35.2137),
+    "usa": (38.9072, -77.0369),
+    "united states": (38.9072, -77.0369),
+    "us": (38.9072, -77.0369),
+    "palestine": (31.8996, 35.2042),
+    "lebanon": (33.8886, 35.4955),
+    "syria": (33.5138, 36.2765),
+    "iraq": (33.3152, 44.3661),
+    "jordan": (31.9539, 35.9106),
+    "saudi arabia": (24.7136, 46.6753),
+    "qatar": (25.2854, 51.5310),
+    "kuwait": (29.3759, 47.9774),
+    "uae": (25.2048, 55.2708),
+    "oman": (23.5880, 58.3829),
+    "yemen": (15.3694, 44.1910),
 }
 
 # Nominatim cache to avoid duplicate API calls
@@ -125,6 +155,11 @@ async def geolocate_article(article: RawArticle) -> tuple[Optional[float], Optio
         if hint_lower in KNOWN_LOCATIONS:
             lat, lng, country = KNOWN_LOCATIONS[hint_lower]
             return lat, lng, hint.title(), country
+        # Country hint → use capital city
+        if hint_lower in COUNTRY_TO_CAPITAL:
+            capital = COUNTRY_TO_CAPITAL[hint_lower]
+            lat, lng, country = KNOWN_LOCATIONS[capital]
+            return lat, lng, capital.title(), country
         if hint_lower in COUNTRY_COORDS:
             lat, lng = COUNTRY_COORDS[hint_lower]
             return lat, lng, hint.title(), hint.title()
@@ -136,6 +171,11 @@ async def geolocate_article(article: RawArticle) -> tuple[Optional[float], Optio
         if location in KNOWN_LOCATIONS:
             lat, lng, country = KNOWN_LOCATIONS[location]
             return lat, lng, location.title(), country
+        # Country mention → use capital city
+        if location in COUNTRY_TO_CAPITAL:
+            capital = COUNTRY_TO_CAPITAL[location]
+            lat, lng, country = KNOWN_LOCATIONS[capital]
+            return lat, lng, capital.title(), country
         if location in COUNTRY_COORDS:
             lat, lng = COUNTRY_COORDS[location]
             return lat, lng, location.title(), location.title()

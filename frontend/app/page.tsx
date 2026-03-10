@@ -94,7 +94,7 @@ export default function HomePage() {
       </div>
 
       {/* ─── Sidebar ─── */}
-      <div style={{ gridArea: "sidebar" }}>
+      <div style={{ gridArea: "sidebar", overflow: "hidden", minHeight: 0 }}>
         <Sidebar
           events={events}
           eventTypes={eventTypes}
