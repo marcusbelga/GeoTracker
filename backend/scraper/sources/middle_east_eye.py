@@ -1,8 +1,6 @@
 """
 Middle East Eye scraper — independent Middle East news outlet.
-Uses httpx since MEE has a more accessible structure.
 """
-import httpx
 from datetime import datetime
 from typing import Optional
 
