@@ -16,26 +16,24 @@ from .base_scraper import RawArticle
 from .parser import classify_event_type
 from .geolocator import geolocate_article
 from .deduplicator import find_matching_event
-from .sources.guardian import GuardianScraper
-from .sources.gdelt import GDELTScraper
 from .sources.reuters import ReutersScraper
-from .sources.bbc import BBCScraper
-from .sources.ap_news import APNewsScraper
-from .sources.aljazeera import AlJazeeraScraper
-from .sources.middle_east_eye import MiddleEastEyeScraper
-from .sources.times_of_israel import TimesOfIsraelScraper
+from .sources.wsj import WSJScraper
+from .sources.nyt import NYTScraper
+from .sources.cnn import CNNScraper
+from .sources.foreign_affairs import ForeignAffairsScraper
+from .sources.dw import DWScraper
+from .sources.ft import FTScraper
 
 logger = logging.getLogger(__name__)
 
 SCRAPERS = [
-    GuardianScraper,
-    GDELTScraper,
     ReutersScraper,
-    BBCScraper,
-    APNewsScraper,
-    AlJazeeraScraper,
-    MiddleEastEyeScraper,
-    TimesOfIsraelScraper,
+    WSJScraper,
+    NYTScraper,
+    CNNScraper,
+    ForeignAffairsScraper,
+    DWScraper,
+    FTScraper,
 ]
 
 
