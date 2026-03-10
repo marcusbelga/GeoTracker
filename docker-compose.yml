@@ -46,15 +46,14 @@ services:
       - "8000"
     restart: unless-stopped
 
-  # Auto-pulls new images from GHCR and restarts containers
+  # Auto-pulls new images from GHCR (public) and restarts containers
   watchtower:
-    image: containrrr/watchtower:latest
+    image: containrrr/watchtower:1.7.1
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /root/.docker/config.json:/config.json:ro
     environment:
-      - DOCKER_CONFIG=/config.json
+      - DOCKER_API_VERSION=1.40
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=300
       - WATCHTOWER_ROLLING_RESTART=true
