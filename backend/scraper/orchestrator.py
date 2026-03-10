@@ -23,6 +23,12 @@ from .sources.cnn import CNNScraper
 from .sources.foreign_affairs import ForeignAffairsScraper
 from .sources.dw import DWScraper
 from .sources.ft import FTScraper
+from .sources.guardian import GuardianScraper
+from .sources.bbc import BBCScraper
+from .sources.ap_news import APNewsScraper
+from .sources.aljazeera import AlJazeeraScraper
+from .sources.middle_east_eye import MiddleEastEyeScraper
+from .sources.times_of_israel import TimesOfIsraelScraper
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +40,12 @@ SCRAPERS = [
     ForeignAffairsScraper,
     DWScraper,
     FTScraper,
+    GuardianScraper,
+    BBCScraper,
+    APNewsScraper,
+    AlJazeeraScraper,
+    MiddleEastEyeScraper,
+    TimesOfIsraelScraper,
 ]
 
 

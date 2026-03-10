@@ -51,6 +51,18 @@ NEWS_SOURCES = [
      "credibility": 0.9, "scraper_type": "playwright"},
     {"slug": "ft", "display_name": "Financial Times", "base_url": "https://www.ft.com",
      "credibility": 0.95, "scraper_type": "playwright"},
+    {"slug": "guardian", "display_name": "The Guardian", "base_url": "https://www.theguardian.com",
+     "credibility": 0.9, "scraper_type": "api"},
+    {"slug": "bbc", "display_name": "BBC News", "base_url": "https://www.bbc.com/news",
+     "credibility": 0.95, "scraper_type": "playwright"},
+    {"slug": "ap", "display_name": "Associated Press", "base_url": "https://apnews.com",
+     "credibility": 1.0, "scraper_type": "playwright"},
+    {"slug": "aljazeera", "display_name": "Al Jazeera English", "base_url": "https://www.aljazeera.com",
+     "credibility": 0.85, "scraper_type": "playwright"},
+    {"slug": "middle-east-eye", "display_name": "Middle East Eye", "base_url": "https://www.middleeasteye.net",
+     "credibility": 0.8, "scraper_type": "playwright"},
+    {"slug": "times-of-israel", "display_name": "Times of Israel", "base_url": "https://www.timesofisrael.com",
+     "credibility": 0.8, "scraper_type": "playwright"},
 ]
 
 

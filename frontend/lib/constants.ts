@@ -20,6 +20,12 @@ export const SOURCE_DISPLAY: Record<string, string> = {
   "foreign-affairs": "Foreign Affairs",
   dw: "DW",
   ft: "Financial Times",
+  guardian: "Guardian",
+  bbc: "BBC",
+  ap: "AP",
+  aljazeera: "Al Jazeera",
+  "middle-east-eye": "Mid East Eye",
+  "times-of-israel": "Times of Israel",
 };
 
 export type PoliticalOrientation = "left" | "center" | "right";
@@ -29,11 +35,17 @@ export const SOURCE_ORIENTATION: Record<string, PoliticalOrientation> = {
   // Left-leaning
   nyt: "left",
   cnn: "left",
+  guardian: "left",
+  aljazeera: "left",
+  "middle-east-eye": "left",
   // Centrist / wire services
   reuters: "center",
+  ap: "center",
+  bbc: "center",
   dw: "center",
   "foreign-affairs": "center",
   // Right-leaning / pro-market
   wsj: "right",
   ft: "right",
+  "times-of-israel": "right",
 };
