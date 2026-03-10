@@ -56,7 +56,10 @@ def list_events(
     for event in events:
         er = EventResponse.model_validate(event)
         if event.sources:
-            er.source_url = event.sources[0].article_url
+            es0 = event.sources[0]
+            er.source_url = es0.article_url
+            if es0.source:
+                er.source_slug = es0.source.slug
         event_responses.append(er)
 
     return EventsListResponse(

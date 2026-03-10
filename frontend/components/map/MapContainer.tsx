@@ -44,8 +44,13 @@ export default function MapContainer({ events, selectedEventId, onEventSelect }:
   const mapDivRef = useRef<HTMLDivElement>(null);
   const clusterMarkersRef = useRef<Map<string, { marker: mapboxgl.Marker; el: HTMLDivElement }>>(new Map());
   const popupRootRef = useRef<{ root: ReturnType<typeof import("react-dom/client")["createRoot"]>; popup: mapboxgl.Popup } | null>(null);
-  // Track state for popup without re-running map init
-  const popupStateRef = useRef<{ event: GeoEvent | null; lngLat: [number, number] | null }>({ event: null, lngLat: null });
+
+  /**
+   * Tracks which cluster key is "pinned open" (i.e. user clicked a pin in it).
+   * Using a ref so we can read the current value inside callbacks without stale closures,
+   * and without causing extra re-renders.
+   */
+  const pinnedClusterKeyRef = useRef<string | null>(null);
 
   // ── Initialize map once ──────────────────────────────────────────────────
   useEffect(() => {
@@ -65,14 +70,67 @@ export default function MapContainer({ events, selectedEventId, onEventSelect }:
     };
   }, []);
 
+  // ── Show Mapbox popup for an event ──────────────────────────────────────
+  const showPopup = useCallback(
+    (event: GeoEvent) => {
+      const map = mapRef.current;
+      if (!map) return;
+
+      // Tear down previous popup (without triggering its onClose)
+      if (popupRootRef.current) {
+        popupRootRef.current.root.unmount();
+        popupRootRef.current.popup.remove();
+        popupRootRef.current = null;
+      }
+
+      const container = document.createElement("div");
+      const popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        offset: [0, -20],
+        maxWidth: "280px",
+      })
+        .setLngLat([event.lng, event.lat])
+        .setDOMContent(container)
+        .addTo(map);
+
+      const { createRoot } = require("react-dom/client");
+      const root = createRoot(container);
+      root.render(
+        <MapPopup
+          event={event}
+          onClose={() => {
+            root.unmount();
+            popup.remove();
+            popupRootRef.current = null;
+            // Unpin the cluster so the radial collapses
+            pinnedClusterKeyRef.current = null;
+            onEventSelect(null);
+          }}
+        />
+      );
+
+      popupRootRef.current = { root, popup };
+    },
+    [onEventSelect]
+  );
+
   // ── Build one cluster marker element ────────────────────────────────────
   const createClusterElement = useCallback(
-    (clusterEvents: GeoEvent[]): HTMLDivElement => {
+    (clusterEvents: GeoEvent[], clusterKey: string): HTMLDivElement => {
       const container = document.createElement("div");
       const count = clusterEvents.length;
-      container.className = count === 1 ? "cluster-marker single" : "cluster-marker";
 
-      // Max 8 pins in radial display; if more, just expand the first 8
+      // A multi-event cluster is "pinned open" if the user clicked a pin inside it.
+      // We persist this across the marker rebuild that happens after onEventSelect().
+      const isPinned = count > 1 && pinnedClusterKeyRef.current === clusterKey;
+
+      const classes = ["cluster-marker"];
+      if (count === 1) classes.push("single");
+      if (isPinned) classes.push("is-expanded");
+      container.className = classes.join(" ");
+
+      // Max 8 pins in radial display
       const displayEvents = clusterEvents.slice(0, 8);
       const displayCount = displayEvents.length;
       const positions = radialPositions(displayCount, displayCount === 1 ? 0 : 62);
@@ -109,6 +167,10 @@ export default function MapContainer({ events, selectedEventId, onEventSelect }:
 
         pinDiv.addEventListener("click", (e) => {
           e.stopPropagation();
+          // Pin this cluster open BEFORE calling onEventSelect so that when
+          // the markers rebuild (triggered by selectedEventId change) the cluster
+          // is already marked as expanded.
+          pinnedClusterKeyRef.current = clusterKey;
           onEventSelect(event);
           showPopup(event);
         });
@@ -126,51 +188,7 @@ export default function MapContainer({ events, selectedEventId, onEventSelect }:
 
       return container;
     },
-    [selectedEventId, onEventSelect] // eslint-disable-line
-  );
-
-  // ── Show Mapbox popup for an event ──────────────────────────────────────
-  const showPopup = useCallback(
-    (event: GeoEvent) => {
-      const map = mapRef.current;
-      if (!map) return;
-
-      // Tear down previous popup
-      if (popupRootRef.current) {
-        popupRootRef.current.root.unmount();
-        popupRootRef.current.popup.remove();
-        popupRootRef.current = null;
-      }
-
-      const container = document.createElement("div");
-      const popup = new mapboxgl.Popup({
-        closeButton: false,
-        closeOnClick: false,
-        offset: [0, -20],
-        maxWidth: "280px",
-      })
-        .setLngLat([event.lng, event.lat])
-        .setDOMContent(container)
-        .addTo(map);
-
-      const { createRoot } = require("react-dom/client");
-      const root = createRoot(container);
-      root.render(
-        <MapPopup
-          event={event}
-          onClose={() => {
-            root.unmount();
-            popup.remove();
-            popupRootRef.current = null;
-            onEventSelect(null);
-          }}
-        />
-      );
-
-      popupRootRef.current = { root, popup };
-      popupStateRef.current = { event, lngLat: [event.lng, event.lat] };
-    },
-    [onEventSelect]
+    [selectedEventId, onEventSelect, showPopup] // eslint-disable-line
   );
 
   // ── Sync cluster markers when events / selection changes ─────────────────
@@ -191,7 +209,7 @@ export default function MapContainer({ events, selectedEventId, onEventSelect }:
       const avgLng = clusterEvents.reduce((s, e) => s + e.lng, 0) / clusterEvents.length;
       const clusterKey = `${avgLat.toFixed(2)},${avgLng.toFixed(2)}`;
 
-      const el = createClusterElement(clusterEvents);
+      const el = createClusterElement(clusterEvents, clusterKey);
       const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
         .setLngLat([avgLng, avgLat])
         .addTo(map);

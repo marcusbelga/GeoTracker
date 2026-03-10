@@ -73,6 +73,37 @@ export default function MapPopup({ event, onClose }: MapPopupProps) {
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
         <VerificationBadge isVerified={event.is_verified} sourceCount={event.source_count} />
       </div>
+
+      {/* ↗ Open source article */}
+      {event.source_url && (
+        <a
+          href={event.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            marginTop: 10,
+            paddingTop: 8,
+            borderTop: "1px solid var(--color-rule)",
+            fontFamily: "'Courier New', monospace",
+            fontSize: 10,
+            color: "var(--color-ink-light)",
+            textDecoration: "none",
+            letterSpacing: "0.04em",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-ink)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-ink-light)";
+          }}
+        >
+          <span style={{ fontSize: 12 }}>↗</span>
+          <span>READ SOURCE ARTICLE</span>
+        </a>
+      )}
     </div>
   );
 }

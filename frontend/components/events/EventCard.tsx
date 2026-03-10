@@ -2,11 +2,46 @@
 
 import { GeoEvent } from "@/types";
 import VerificationBadge from "@/components/ui/VerificationBadge";
+import { SOURCE_ORIENTATION, PoliticalOrientation } from "@/lib/constants";
 
 interface EventCardProps {
   event: GeoEvent;
   isSelected: boolean;
   onClick: () => void;
+}
+
+const ORIENTATION_STYLE: Record<
+  PoliticalOrientation,
+  { bg: string; label: string }
+> = {
+  left:   { bg: "#1a3a8b", label: "LEFT"   },
+  center: { bg: "#1a1a1a", label: "CENTER" },
+  right:  { bg: "#8b1a1a", label: "RIGHT"  },
+};
+
+function PoliticalBadge({ slug }: { slug?: string }) {
+  if (!slug) return null;
+  const orientation = SOURCE_ORIENTATION[slug];
+  if (!orientation) return null;
+  const { bg, label } = ORIENTATION_STYLE[orientation];
+  return (
+    <span
+      style={{
+        background: bg,
+        color: "#f7f4ef",
+        fontFamily: "'Courier New', monospace",
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: "0.06em",
+        padding: "2px 5px",
+        borderRadius: 3,
+        whiteSpace: "nowrap",
+        flexShrink: 0,
+      }}
+    >
+      {label}
+    </span>
+  );
 }
 
 export default function EventCard({ event, isSelected, onClick }: EventCardProps) {
@@ -73,7 +108,7 @@ export default function EventCard({ event, isSelected, onClick }: EventCardProps
           {event.title}
         </div>
 
-        {/* Location + verification */}
+        {/* Location + verification + political badge */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           {event.location_name && (
             <span
@@ -87,6 +122,7 @@ export default function EventCard({ event, isSelected, onClick }: EventCardProps
             </span>
           )}
           <VerificationBadge isVerified={event.is_verified} sourceCount={event.source_count} />
+          <PoliticalBadge slug={event.source_slug} />
         </div>
       </button>
 

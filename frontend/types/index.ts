@@ -30,6 +30,7 @@ export interface GeoEvent {
   is_verified: boolean;
   confidence: number;
   source_url?: string;
+  source_slug?: string;
 }
 
 export interface GeoEventDetail extends GeoEvent {

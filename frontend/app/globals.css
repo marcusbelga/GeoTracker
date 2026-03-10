@@ -90,6 +90,15 @@ body {
   ) rotate(0deg) scale(1.1);
 }
 
+/* Pinned open (user clicked a pin — cluster stays expanded even without hover) */
+.cluster-marker.is-expanded .cluster-pin {
+  transform: translate(
+    calc(-50% + var(--expand-x, 0px)),
+    calc(-50% + var(--expand-y, 0px))
+  ) rotate(0deg) scale(1.1);
+}
+.cluster-marker.is-expanded .cluster-badge { background: var(--color-danger); }
+
 .cluster-pin:hover {
   filter: brightness(1.15);
   z-index: 30 !important;

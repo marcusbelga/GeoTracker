@@ -38,7 +38,8 @@ class EventResponse(BaseModel):
     source_count: int
     is_verified: bool
     confidence: float
-    source_url: Optional[str] = None  # Primary source article URL
+    source_url: Optional[str] = None   # Primary source article URL
+    source_slug: Optional[str] = None  # Primary source slug (e.g. "guardian", "reuters")
 
     model_config = {"from_attributes": True}
 

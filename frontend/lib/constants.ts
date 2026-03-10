@@ -19,4 +19,23 @@ export const SOURCE_DISPLAY: Record<string, string> = {
   guardian: "Guardian",
   aljazeera: "Al Jazeera",
   gdelt: "GDELT",
+  "middle-east-eye": "Mid East Eye",
+  "times-of-israel": "Times of Israel",
+};
+
+export type PoliticalOrientation = "left" | "center" | "right";
+
+/** Editorial orientation of each news source — used for the sidebar badge. */
+export const SOURCE_ORIENTATION: Record<string, PoliticalOrientation> = {
+  // Left-leaning
+  guardian: "left",
+  aljazeera: "left",
+  "middle-east-eye": "left",
+  // Centrist / wire services / data
+  reuters: "center",
+  ap: "center",
+  bbc: "center",
+  gdelt: "center",
+  // Right-leaning
+  "times-of-israel": "right",
 };
